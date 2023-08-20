@@ -61,7 +61,7 @@ class Guild
             $raidData .= $raidScore . ' (' . $raidName . ')';
             if ($raidName != array_key_last($raidDataArray)) {
                 $raidData .= ' // ';
-            }
+            }   
         }
 
         return $raidData;
