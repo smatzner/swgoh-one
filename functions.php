@@ -2,29 +2,25 @@
 
 require 'vendor/autoload.php';
 
-use Goutte\Client;
+use Symfony\Component\DomCrawler\Crawler;
 
 class Guild
 {
-    public $guildID;
-    public $swgohRecruitID;
-    protected $guildData;
     public $name;
     public $galacticPower;
     public $memberCount;
     public $avgGalacticPower;
     public $avgArenaRank;
     public $avgFleetArenaRank;
-    protected $client;
-    protected $crawler;
 
-    public function __construct($guildID, $guildRecruitID, $guildRecruitName = '')
+    private $html;
+    private $crawler;
+
+    public function __construct($guildID, $swgohRecruitmentID, $swgohRecruitmenttName = '')
     {
         $response = file_get_contents('http://api.swgoh.gg/guild-profile/' . $guildID);
         $guildData = json_decode($response);
 
-
-        $this->guildID = $guildID;
         $this->name = $guildData->data->name;
         $this->galacticPower = number_format($guildData->data->galactic_power, 0, ',', '.');
         $this->memberCount = $guildData->data->member_count;
@@ -32,12 +28,13 @@ class Guild
         $this->avgArenaRank = floor($guildData->data->avg_arena_rank);
         $this->avgFleetArenaRank = floor($guildData->data->avg_fleet_arena_rank);
 
-        $this->client = new Client();
-        if (empty($guildRecruitName)) {
-            $this->crawler = $this->client->request('GET', 'https://recruit.swgoh.gg/guild/' . $guildRecruitID . '/' . $this->name);
+        if(empty($swgohRecruitmenttName)){
+            $this->html = file_get_contents('https://recruit.swgoh.gg/guild/'. $swgohRecruitmentID . '/' . $this->name);
         } else {
-            $this->crawler = $this->client->request('GET', 'https://recruit.swgoh.gg/guild/' . $guildRecruitID . '/' . $guildRecruitName);
+            $this->html = file_get_contents('https://recruit.swgoh.gg/guild/' . $swgohRecruitmentID . '/' . $swgohRecruitmenttName);
         }
+
+        $this->crawler = new Crawler($this->html);
     }
 
     public function getRaidData()
