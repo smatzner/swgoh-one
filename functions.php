@@ -21,7 +21,16 @@ class Guild
     public function __construct(string $guildID)
     {
         $response = file_get_contents('http://api.swgoh.gg/guild-profile/' . $guildID);
+
+        if(!$response){
+            throw new Exception();
+        }
+
         $guildData = json_decode($response);
+
+        if(!$guildData){
+            throw new Exception();
+        }
 
         $this->name = $guildData->data->name;
         $this->galacticPower = number_format($guildData->data->galactic_power, 0, ',', '.');
@@ -79,14 +88,14 @@ class Guild
     }
 
 
-    public function getRaidData(): string
+    public function getRaidData($default): string
     {
-        if (isset($this->crawler)) {
+        try {
             $raidProgressElement = $this->crawler->filter('h2:contains("Raid Progress") + div');
 
             $raidScores = [];
             $raidProgressElement->children()->filter('span.badge')->each(function ($raidScore) use (&$raidScores) {
-                array_push($raidScores, $raidScore->text());
+                array_push($raidScores, preg_replace('/,/', '.', $raidScore->text()));
             });
 
             $raidNames = [];
@@ -94,26 +103,31 @@ class Guild
                 array_push($raidNames, $raidName->attr('alt'));
             });
 
+            if (empty($raidNames) || empty($raidScores)) {
+                throw new Exception();
+            }
+
+            $raidNames = array_unique($raidNames);
+
             $raidDataArray = array_combine($raidNames, $raidScores);
 
             $raidData = '';
             foreach ($raidDataArray as $raidName => $raidScore) {
                 $raidData .= $raidScore . ' [' . $raidName . ']';
-                if ($raidName != array_key_last($raidDataArray)) {
+                if ($raidName !== array_key_last($raidDataArray)) {
                     $raidData .= ' // ';
                 }
             }
 
             return $raidData;
-        } else {
-            return 'Crawler not set';
+        } catch (Exception $e) {
+            return $default;
         }
-
     }
 
-    public function getTbData(): string
+    public function getTbData($default): string
     {
-        if (isset($this->crawler)) {
+        try {
             $tbProgressElement = $this->crawler->filter('h2:contains("TB Progress") + div');
             $starImg = '<img class="starIcon" src="https://www.swgoh.one/wp-content/uploads/2023/08/icon-star.png">';
 
@@ -128,6 +142,7 @@ class Guild
                     array_push($tbNames, strtoupper($TBName->attr('alt')));
                 }
             });
+            $tbNames = array_unique($tbNames);
 
             $tbDataArray = array_combine($tbNames, $tbScores);
 
@@ -140,24 +155,27 @@ class Guild
             }
 
             return $tbData;
-        } else {
-            return 'Crawler not set';
+        } catch (Exception $e) {
+            return $default;
         }
     }
 
-    public function getTwData(): string
+    public function getTwData($default): string
     {
-        if(isset($this->crawler)){
+        try {
             $badgeElements = $this->crawler->filter('.rounded-pill');
-
             $badgeElements->each(function ($badgeElement) use (&$twBadge) {
                 if (preg_match('/.* TW$/', $badgeElement->text())) {
                     $twBadge = preg_replace('/\s+TW$/', '', $badgeElement->text());
                 }
             });
+            if(!$twBadge){
+                throw new Exception();
+            }
             return $twBadge;
-        } else {
-            return 'Crawler not set';
+
+        } catch (Exception $e) {
+            return $default;
         }
 
     }
